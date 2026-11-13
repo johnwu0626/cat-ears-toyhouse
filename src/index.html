@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#183c3b"><title>桌底的貓耳｜玩具屋抓貓大作戰</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<svg class="defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="paw" viewBox="0 0 24 24"><ellipse cx="6" cy="8" rx="2.4" ry="3" transform="rotate(-24 6 8)"/><ellipse cx="11" cy="5" rx="2.4" ry="3"/><ellipse cx="17" cy="6" rx="2.4" ry="3" transform="rotate(20 17 6)"/><ellipse cx="21" cy="11" rx="2" ry="2.7"/><path d="M5 18c0-3 4-8 7-8s7 5 7 8-4 3-7 2-7 1-7-2Z"/></symbol>
+<symbol id="pause" viewBox="0 0 24 24"><path d="M8 5v14m8-14v14"/></symbol><symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15m-5-5 5 5-5 5"/></symbol><symbol id="cup" viewBox="0 0 24 24"><path d="M7 3h10v7c0 4-2 6-5 6s-5-2-5-6V3ZM7 5H3v3c0 3 2 5 5 5m9-8h4v3c0 3-2 5-5 5M12 16v5m-5 0h10"/></symbol>
+<symbol id="sound" viewBox="0 0 24 24"><path d="m12 4-6 5H3v6h3l6 5V4Zm4 4c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></symbol><symbol id="mute" viewBox="0 0 24 24"><path d="m12 4-6 5H3v6h3l6 5V4Zm5 5 5 6m0-6-5 6"/></symbol>
+<symbol id="sprint" viewBox="0 0 24 24"><path d="m14 2-9 12h7l-2 8 10-13h-7l1-7Z"/></symbol><symbol id="sneak" viewBox="0 0 24 24"><path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="3"/><path d="m4 3 16 18"/></symbol><symbol id="yarn" viewBox="0 0 24 24"><circle cx="10" cy="11" r="8"/><path d="m4 5 12 12M7 3l11 11M2 9l12 10M16 5 4 17m12 0c6 0 2 7 6 5"/></symbol>
+<symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol><symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 8v5l3 2M9 2h6m-3 0v3"/></symbol>
+</defs></svg>
+<header class="topbar"><a class="brand" href="#"><span class="brand-paw"><svg><use href="#paw"/></svg></span><span>桌底的貓耳<small>LITTLE PAWS, BIG CHASE</small></span><span class="edition">TOY HOUSE</span></a><nav><button id="helpButton" class="nav-button">玩法指南</button><button id="recordsButton" class="nav-button" aria-label="我的紀錄"><svg class="icon"><use href="#cup"/></svg><span>我的紀錄</span></button><button id="soundButton" class="icon-button" aria-label="開啟音效" aria-pressed="false"><svg class="icon"><use href="#mute"/></svg></button></nav></header>
+<main>
+<div class="page-heading"><div><span class="overline">THE CHASE IS ON.</span><h1>小貓咪，<span>別想跑！</span></h1></div><p>一間玩具屋，三個小搗蛋。<br>動點腦筋，把牠們抱回來。</p></div>
+<div class="game-layout">
+<aside class="sidebar">
+ <section id="setupPanel"><div class="panel-label"><span>01</span> 選一位躲貓貓高手</div><div id="catChoices" class="cat-choices" role="group" aria-label="選擇貓咪"></div><div class="panel-label room-label"><span>02</span> 今天在哪裡玩？</div><label class="sr-only" for="roomSelect">選擇房間</label><select id="roomSelect"></select><div class="cat-story" id="catStory"></div><button id="startButton" class="primary-button">開始抓貓 <svg class="icon"><use href="#arrow"/></svg></button><p class="local-best" id="bestLabel">留下你的第一個抓貓紀錄</p></section>
+ <section id="missionPanel" hidden><div class="panel-label"><span class="live-dot"></span> 這次的小任務</div><div class="mission-cat" id="missionCat"></div><h2 id="missionTitle">把橘子抱回來</h2><p class="mission-copy" id="missionCopy"></p><div class="meter-label"><span>你的體力</span><b id="staminaNumber">100</b></div><div class="meter stamina"><i id="staminaFill"></i></div><div class="meter-label alert-label"><span>貓咪警戒</span><b id="alertLabel">放鬆中</b></div><div class="meter alert"><i id="alertFill"></i></div><div class="state-note" id="stateNote">輕輕靠近，先別驚動牠。</div><div class="stats"><div><strong id="scareCount">0</strong><span>驚動次數</span></div><div><strong id="lureCount">3</strong><span>毛線球剩餘</span></div></div><button class="secondary-button" id="pauseSidebar">暫停一下</button></section>
+ <div class="side-tip"><span class="tip-mark">!</span><p id="sideTip">別一直追著跑。<strong>潛行接近，再衝刺攔截。</strong></p></div>
+</aside>
+<section class="stage" aria-label="立體玩具屋遊戲">
+ <canvas id="toyCanvas" tabindex="0" aria-label="立體抓貓遊戲區；點擊或拖曳走道移動，方向鍵或 WASD 移動；Shift 衝刺，C 切換潛行，E 投放毛線球。"></canvas>
+ <div class="motion-edge" aria-hidden="true"></div><div id="chaseCue" class="chase-cue" aria-hidden="true" hidden></div>
+ <div class="stage-top"><div class="room-pill"><span class="room-number" id="roomNumber">01</span><div><small>THE TOY HOUSE</small><strong id="roomName">陽光客廳</strong></div></div><div class="timer-area"><div class="timer" id="timer"><svg class="icon"><use href="#clock"/></svg><span>00:00.0</span></div><button id="pauseButton" class="icon-button" aria-label="暫停遊戲" hidden><svg class="icon"><use href="#pause"/></svg></button></div></div>
+ <div class="compact-meters"><label>體力<span><i id="compactStamina"></i></span></label><label>警戒<span><i id="compactAlert"></i></span></label></div>
+ <div class="ready-tag" id="readyTag"><span class="tag-paw"><svg><use href="#paw"/></svg></span><div><strong>牠躲好了，換你找！</strong><small>選好貓咪，開始這場小小追逐。</small></div></div>
+ <div class="action-bar" id="actionBar" hidden><button id="sneakButton" aria-pressed="false"><svg class="icon"><use href="#sneak"/></svg><span>潛行<small>C · 切換</small></span></button><button id="sprintButton"><svg class="icon"><use href="#sprint"/></svg><span>衝刺<small>Shift · 按住</small></span></button><button id="lureButton" aria-pressed="false"><svg class="icon"><use href="#yarn"/></svg><span>毛線球<small>E · 點地面</small></span><b id="chargeBadge">3</b></button></div>
+ <div class="stage-message" id="stageMessage" role="status"></div>
+ <div class="loading" id="loading"><span class="loading-paw"><svg><use href="#paw"/></svg></span>正在整理玩具屋…</div>
+ <div class="game-overlay" id="gameOverlay" hidden></div>
+</section>
+</div>
+<div class="game-footer"><span><i></i><span id="controlsHint">點擊走道／拖曳移動，也可以使用 WASD 或方向鍵。</span></span><span>觀察 <b>→</b> 引誘 <b>→</b> 攔截 <b>→</b> 抱緊</span></div>
+</main>
+<dialog id="infoDialog"><button id="closeDialog" class="icon-button dialog-close" aria-label="關閉"><svg class="icon"><use href="#close"/></svg></button><div id="dialogContent"></div></dialog>
+<div id="liveStatus" class="sr-only" role="status" aria-live="polite"></div>
+<script src="game-core.js"></script><script type="module" src="app.js"></script>
+</body></html>
