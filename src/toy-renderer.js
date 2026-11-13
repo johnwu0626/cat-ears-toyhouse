@@ -609,6 +609,8 @@ export class ToyRenderer {
 
   _initMotion() {
     this.reducedMotion = false;
+    this.playView = false;
+    this.portraitPlay = false;
     this.cameraHome = this.camera.position.clone();
     this.cameraFollow = new THREE.Vector2();
     this.motionPool = [];
@@ -616,17 +618,31 @@ export class ToyRenderer {
     this._resetMotion();
   }
 
-  /** Disable optional speed effects, camera motion and squash/stretch. */
+  /** Keep essential portrait tracking while disabling optional motion effects. */
   setReducedMotion(enabled) {
     this.reducedMotion = !!enabled;
     if (this.reducedMotion) {
       this._clearMotionEffects();
-      this.cameraFollow.set(0, 0);
-      this.camera.position.copy(this.cameraHome);
+      if (!this.portraitPlay) {
+        this.cameraFollow.set(0, 0);
+        this.camera.position.copy(this.cameraHome);
+      }
       this.camera.zoom = 1;
       this.camera.updateProjectionMatrix();
       this.camera.updateMatrixWorld();
     }
+  }
+
+  /** Switch between the complete toy-room preview and a close portrait chase. */
+  setPlayView(active) {
+    const next = !!active;
+    if (next === this.playView) return;
+    this.playView = next;
+    this._playCameraReady = false;
+    this.cameraFollow.set(0, 0);
+    this.camera.position.copy(this.cameraHome);
+    this.camera.zoom = 1;
+    this.resize();
   }
 
   _resetMotion() {
@@ -640,6 +656,7 @@ export class ToyRenderer {
     this._poseTime = 0;
     this._winAge = 0;
     this._previousMode = 'ready';
+    this._playCameraReady = false;
     this._clearMotionEffects();
     if (this.cameraHome) {
       this.cameraFollow.set(0, 0);
@@ -834,6 +851,37 @@ export class ToyRenderer {
 
   _updateMotionCamera(model, dt) {
     const p = model.player;
+    if (this.portraitPlay && p) {
+      // Freeze the current composition while a pause/result covers the room.
+      if (this._playCameraReady && (model.mode === 'paused' || model.mode === 'won')) return;
+      const cat = model.cat;
+      let dx = cat ? wx(cat.x) - wx(p.x) : 0;
+      let dz = cat ? wz(cat.y) - wz(p.y) : 0;
+      const distance = Math.hypot(dx, dz);
+      // A small look toward the cat helps planning without zooming the player out.
+      const look = distance > 0 ? Math.min(distance * .20, .72) / distance : 0;
+      dx *= look; dz *= look;
+      const sprint = model.mode === 'playing' && !this.reducedMotion && p.sprinting && p.moving;
+      const lead = sprint ? .10 : 0;
+      const targetX = wx(p.x) + dx + lead * Math.cos(Number(p.dir) || 0);
+      const targetZ = wz(p.y) + dz + lead * Math.sin(Number(p.dir) || 0);
+      if (!this._playCameraReady) {
+        this.cameraFollow.set(targetX, targetZ);
+        this._playCameraReady = true;
+      } else {
+        this.cameraFollow.x = damp(this.cameraFollow.x, targetX, 10, dt);
+        this.cameraFollow.y = damp(this.cameraFollow.y, targetZ, 10, dt);
+      }
+      const zoom = sprint ? 1.025 : 1;
+      const nextZoom = this.reducedMotion ? 1 : damp(this.camera.zoom, zoom, 8, dt);
+      if (Math.abs(nextZoom - this.camera.zoom) > .00001) {
+        this.camera.zoom = nextZoom;
+        this.camera.updateProjectionMatrix();
+      }
+      this.camera.position.set(this.cameraHome.x + this.cameraFollow.x, this.cameraHome.y, this.cameraHome.z + this.cameraFollow.y);
+      this.camera.updateMatrixWorld();
+      return;
+    }
     const engaged = model.mode === 'playing' && !this.reducedMotion;
     if (!engaged) {
       this.cameraFollow.set(0, 0);
@@ -927,6 +975,19 @@ export class ToyRenderer {
     return {x, y};
   }
 
+  /** Project a game coordinate through the current camera into client pixels. */
+  worldToScreen(x, y, height = 0) {
+    if (this.disposed || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const rect = this.canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    this.tempVector.set(wx(x), Number.isFinite(height) ? height : 0, wz(y)).project(this.camera);
+    return {
+      x: rect.left + (this.tempVector.x + 1) * rect.width / 2,
+      y: rect.top + (1 - this.tempVector.y) * rect.height / 2,
+      visible: Math.abs(this.tempVector.x) <= 1 && Math.abs(this.tempVector.y) <= 1 && Math.abs(this.tempVector.z) <= 1
+    };
+  }
+
   /** Screen-space right/down vectors become game-space x/y movement. */
   screenDirection(dx, dy) {
     const e = this.camera.matrixWorld.elements;
@@ -952,11 +1013,22 @@ export class ToyRenderer {
       minY = Math.min(minY, this.tempVector.y); maxY = Math.max(maxY, this.tempVector.y);
     }
     const aspect = width / height;
-    const vertical = Math.max((maxY - minY) / 2, (maxX - minX) / (2 * aspect)) * 1.025;
+    const wasPortrait = this.portraitPlay;
+    this.portraitPlay = this.playView && aspect < .95;
+    // Width-fitting the entire room made actors tiny on tall phone screens.
+    const vertical = this.portraitPlay ? 4.8 : Math.max((maxY - minY) / 2, (maxX - minX) / (2 * aspect)) * 1.025;
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
     this.camera.left = cx - vertical * aspect; this.camera.right = cx + vertical * aspect;
     this.camera.top = cy + vertical; this.camera.bottom = cy - vertical;
+    if (this.portraitPlay && this._playCameraReady) {
+      this.camera.position.set(this.cameraHome.x + this.cameraFollow.x, this.cameraHome.y, this.cameraHome.z + this.cameraFollow.y);
+    } else if (wasPortrait !== this.portraitPlay && this.cameraFollow) {
+      this.cameraFollow.set(0, 0);
+      this._playCameraReady = false;
+      this.camera.zoom = 1;
+    }
     this.camera.updateProjectionMatrix();
+    this.camera.updateMatrixWorld();
   }
 
   dispose() {
